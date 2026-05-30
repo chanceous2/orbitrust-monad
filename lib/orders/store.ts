@@ -150,6 +150,71 @@ export async function saveOrder(input: {
   return record;
 }
 
+function recordFromOnchainOrder(
+  token: string,
+  match: Awaited<ReturnType<typeof readOrder>>,
+  sellerHandle?: string
+): OrderRecord {
+  const tokenHash = hashToken(token);
+  const createdMs =
+    match.createdAt > 0n ? Number(match.createdAt) * 1000 : Date.now();
+  const ttlMs = ORDER_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+  return {
+    tokenHash,
+    orderId: Number(match.id),
+    seller: match.seller,
+    buyer: match.buyer,
+    amount: match.amount.toString(),
+    metadataHash: match.metadataHash,
+    description: metadataHashToLabel(match.metadataHash),
+    sellerHandle,
+    createdAt: createdMs,
+    expiresAt: createdMs + ttlMs,
+    status: ON_CHAIN_STATUS[match.status] ?? "created",
+    reviewed: match.reviewed,
+    actions: {},
+  };
+}
+
+async function persistRecovered(record: OrderRecord): Promise<void> {
+  const result = await collection().updateOne(
+    { tokenHash: record.tokenHash },
+    { $set: record },
+    { upsert: true }
+  );
+  if (!result.acknowledged) {
+    throw new Error("No se pudo persistir el link de reseña recuperado.");
+  }
+}
+
+/** Fast path when the simulator/API included ?order= in the review URL. */
+async function recoverOrderRecordById(
+  token: string,
+  orderId: number
+): Promise<OrderRecord | undefined> {
+  if (!isRelayerConfigured || !CONTRACT_ADDRESS) return undefined;
+  if (!Number.isFinite(orderId) || orderId < 0) return undefined;
+
+  const buyer = buyerAddressForToken(token).toLowerCase();
+  let match: Awaited<ReturnType<typeof readOrder>>;
+  try {
+    match = await readOrder(BigInt(orderId));
+  } catch {
+    return undefined;
+  }
+  if (match.buyer.toLowerCase() !== buyer) return undefined;
+
+  let sellerHandle: string | undefined;
+  try {
+    const seller = await readSeller(match.seller);
+    if (seller.exists && seller.handle) sellerHandle = seller.handle;
+  } catch {
+    /* optional */
+  }
+
+  return recordFromOnchainOrder(token, match, sellerHandle);
+}
+
 async function recoverOrderRecordFromChain(token: string): Promise<OrderRecord | undefined> {
   if (!isRelayerConfigured || !CONTRACT_ADDRESS) return undefined;
 
@@ -178,38 +243,30 @@ async function recoverOrderRecordFromChain(token: string): Promise<OrderRecord |
     /* optional */
   }
 
-  const tokenHash = hashToken(token);
-  const createdMs =
-    match.createdAt > 0n ? Number(match.createdAt) * 1000 : Date.now();
-  const ttlMs = ORDER_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
-  return {
-    tokenHash,
-    orderId: Number(match.id),
-    seller: match.seller,
-    buyer: match.buyer,
-    amount: match.amount.toString(),
-    metadataHash: match.metadataHash,
-    description: metadataHashToLabel(match.metadataHash),
-    sellerHandle,
-    createdAt: createdMs,
-    expiresAt: createdMs + ttlMs,
-    status: ON_CHAIN_STATUS[match.status] ?? "created",
-    reviewed: match.reviewed,
-    actions: {},
-  };
+  return recordFromOnchainOrder(token, match, sellerHandle);
 }
 
-export async function getOrderByToken(token: string): Promise<OrderRecord | undefined> {
+export async function getOrderByToken(
+  token: string,
+  orderIdHint?: number
+): Promise<OrderRecord | undefined> {
   await ensureIndexes();
   const tokenHash = hashToken(token);
-  let doc = await collection().findOne({ tokenHash });
+  const doc = await collection().findOne({ tokenHash });
   if (doc) return doc;
 
-  const recovered = await recoverOrderRecordFromChain(token);
+  const recovered =
+    orderIdHint !== undefined
+      ? await recoverOrderRecordById(token, orderIdHint)
+      : await recoverOrderRecordFromChain(token);
   if (!recovered) return undefined;
 
-  await collection().updateOne({ tokenHash }, { $set: recovered }, { upsert: true });
+  await persistRecovered(recovered);
   return recovered;
+}
+
+export function reviewPathFor(token: string, orderId: number): string {
+  return `/review/${token}?order=${orderId}`;
 }
 
 export function isExpired(record: OrderRecord, now = Date.now()): boolean {

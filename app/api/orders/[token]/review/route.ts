@@ -15,6 +15,10 @@ export async function POST(req: Request, { params }: { params: { token: string }
   const token = params.token;
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return fail("Token inválido.", 400);
 
+  const orderParam = new URL(req.url).searchParams.get("order");
+  const orderIdHint =
+    orderParam !== null && /^\d+$/.test(orderParam) ? Number(orderParam) : undefined;
+
   let body: { rating?: number; text?: string };
   try {
     body = await req.json();
@@ -30,7 +34,7 @@ export async function POST(req: Request, { params }: { params: { token: string }
   const reviewHash = text ? `demo:${text}` : "demo:review";
 
   try {
-    const result = await runBuyerAction(token, "review", { rating, reviewHash });
+    const result = await runBuyerAction(token, "review", { rating, reviewHash }, orderIdHint);
     return ok({
       hash: result.hash,
       explorerUrl: explorerTxUrl(result.hash),

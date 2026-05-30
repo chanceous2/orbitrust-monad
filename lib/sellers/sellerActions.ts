@@ -19,6 +19,7 @@ import {
 import {
   buyerAddressForToken,
   createOrderToken,
+  reviewPathFor,
   saveOrder,
   updateStatusByOrderId,
 } from "@/lib/orders/store";
@@ -197,10 +198,11 @@ export async function createSellerOrder(
     sellerHandle: onchain.handle || wallet.handle,
   });
 
+  const orderId = Number(result.orderId);
   return {
-    orderId: Number(result.orderId),
+    orderId,
     token,
-    reviewPath: `/review/${token}`,
+    reviewPath: reviewPathFor(token, orderId),
     hash: result.hash,
   };
 }

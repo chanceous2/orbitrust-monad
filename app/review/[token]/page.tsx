@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { formatAmount, shortAddress } from "@/lib/format";
 import { metadataHashDetail, metadataHashToLabel } from "@/lib/orbitrust";
 import { Eyebrow } from "@/components/Eyebrow";
@@ -100,9 +100,35 @@ function StarPicker({
   );
 }
 
+const TOKEN_RE = /^[0-9a-f]{64}$/;
+
+function orderQuery(orderHint: string | null): string {
+  return orderHint && /^\d+$/.test(orderHint) ? `?order=${orderHint}` : "";
+}
+
+async function fetchOrderApi(token: string, orderHint: string | null): Promise<OrderView> {
+  const qs = orderQuery(orderHint);
+  const url = `/api/orders/${token}${qs}`;
+  const delays = [0, 400, 900, 1800];
+  let lastError = "No se pudo cargar la orden.";
+
+  for (const waitMs of delays) {
+    if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
+    const res = await fetch(url, { cache: "no-store" });
+    const data = await res.json();
+    if (res.ok && data.ok !== false) return data as OrderView;
+    lastError = data.error || lastError;
+    if (res.status !== 404) break;
+  }
+
+  throw new Error(lastError);
+}
+
 export default function ReviewPage() {
   const params = useParams<{ token: string }>();
+  const searchParams = useSearchParams();
   const token = (params?.token ?? "") as string;
+  const orderHint = searchParams.get("order");
 
   const [view, setView] = useState<OrderView | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,24 +142,24 @@ export default function ReviewPage() {
   const [reviewText, setReviewText] = useState("");
 
   const load = useCallback(async () => {
+    if (!TOKEN_RE.test(token)) {
+      setLoadError("El link de reseña no es válido.");
+      setView(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/orders/${token}`, { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok || data.ok === false) {
-        setLoadError(data.error || "No se pudo cargar la orden.");
-        setView(null);
-      } else {
-        setView(data as OrderView);
-      }
-    } catch {
-      setLoadError("No se pudo cargar la orden.");
+      setView(await fetchOrderApi(token, orderHint));
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "No se pudo cargar la orden.");
       setView(null);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, orderHint]);
 
   useEffect(() => {
     load();
@@ -143,7 +169,7 @@ export default function ReviewPage() {
     setBusy(true);
     setActionError(null);
     try {
-      const res = await fetch(`/api/orders/${token}/review`, {
+      const res = await fetch(`/api/orders/${token}/review${orderQuery(orderHint)}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ rating, text: reviewText }),

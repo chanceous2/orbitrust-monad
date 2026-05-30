@@ -11,6 +11,7 @@ import { explorerTxUrl } from "@/lib/contract/config";
 import { metadataHashToLabel } from "@/lib/orbitrust";
 import {
   buyerAddressForToken,
+  reviewPathFor,
   saveOrder,
 } from "@/lib/orders/store";
 import {
@@ -109,10 +110,10 @@ export async function POST(req: Request) {
       return fail("No se pudo leer el id de la orden creada.", 502);
     }
 
-    await recordOrder(seller);
+    const orderId = Number(result.orderId);
     await saveOrder({
       token,
-      orderId: Number(result.orderId),
+      orderId,
       seller,
       buyer: derivedBuyer,
       amount: orderPayload.amount,
@@ -120,12 +121,14 @@ export async function POST(req: Request) {
       description: metadataHashToLabel(orderPayload.metadataHash),
       sellerHandle: onchain.handle,
     });
+    await recordOrder(seller);
 
+    const reviewPath = reviewPathFor(token, orderId);
     return ok({
-      orderId: Number(result.orderId),
+      orderId,
       token,
-      reviewPath: `/review/${token}`,
-      confirmPath: `/review/${token}`,
+      reviewPath,
+      confirmPath: reviewPath,
       hash: result.hash,
       explorerUrl: explorerTxUrl(result.hash),
       relayer: result.relayer,

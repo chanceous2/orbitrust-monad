@@ -62,9 +62,10 @@ export type BuyerActionResult = {
 export async function runBuyerAction(
   token: string,
   action: BuyerActionName,
-  review?: { rating: number; reviewHash: string }
+  review?: { rating: number; reviewHash: string },
+  orderIdHint?: number
 ): Promise<BuyerActionResult> {
-  const record = await getOrderByToken(token);
+  const record = await getOrderByToken(token, orderIdHint);
   if (!record) throw new BuyerActionError("Orden no encontrada o link inválido.", 404);
   if (isExpired(record)) throw new BuyerActionError("Este link de reseña expiró.", 410);
 

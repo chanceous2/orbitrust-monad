@@ -23,13 +23,17 @@ function nextAction(status: number, reviewed: boolean): BuyerActionName | null {
   return null;
 }
 
-export async function GET(_req: Request, { params }: { params: { token: string } }) {
+export async function GET(req: Request, { params }: { params: { token: string } }) {
   const token = params.token;
   if (!token || !/^[0-9a-f]{64}$/.test(token)) {
     return fail("Token inválido.", 400);
   }
 
-  const record = await getOrderByToken(token);
+  const orderParam = new URL(req.url).searchParams.get("order");
+  const orderIdHint =
+    orderParam !== null && /^\d+$/.test(orderParam) ? Number(orderParam) : undefined;
+
+  const record = await getOrderByToken(token, orderIdHint);
   if (!record) return fail("Orden no encontrada o link inválido.", 404);
   if (isExpired(record)) return fail("Este link de reseña expiró.", 410);
 
