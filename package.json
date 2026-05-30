@@ -1,0 +1,41 @@
+{
+  "name": "orbitrust",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OrbiTrust - Verified sales history for social commerce sellers, on Monad.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "compile": "hardhat compile",
+    "postcompile": "node scripts/export-abi.js",
+    "export-abi": "node scripts/export-abi.js",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js --network monadTestnet",
+    "smoke": "node scripts/smoke-sponsored.mjs"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "@tanstack/react-query": "^5.59.0",
+    "better-auth": "^1.6.12",
+    "kysely": "^0.28.17",
+    "mongodb": "^7.2.0",
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "viem": "^2.21.0",
+    "wagmi": "^2.12.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0"
+  }
+}

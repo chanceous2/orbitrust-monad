@@ -1,0 +1,28 @@
+---
+description: Copy y UX de OrbiTrust — lenguaje product-friendly, sin jerga crypto
+globs: app/**/*.tsx, components/**/*.tsx
+alwaysApply: false
+---
+
+# Copy OrbiTrust (product-friendly)
+
+Evitá terminología crypto en textos visibles para comerciantes y compradores.
+
+## No usar (UI / marketing)
+- on-chain, blockchain, wallet, gas, MON, cripto, testnet, explorer, tx, nonce, EIP-712, meta-transacción, firmar on-chain
+
+## Preferir
+- **Registro verificable** / **venta verificada** (TrustOrder como nombre de producto está bien)
+- **Perfil de tienda** / **cuenta** (no wallet)
+- **OrbiTrust lo cubre** / **sin costo extra para vos** (no gas)
+- **Link de reseña** (no token)
+- **Registro público** (no explorer)
+- **Confirmado** (no transacción confirmada en red)
+
+## Excepciones
+- Rutas API, logs, código interno y documentación técnica para integradores pueden mantener nombres técnicos en `note` breves, pero orientados al resultado de negocio (ej. “devuelve reviewPath”, no “EIP-712”).
+- Hackathon / footer discreto: “Demo · sin pagos reales” (sin nombrar chain).
+
+## Tono
+- Español rioplatense, claro para dueños de tienda online.
+- Vender confianza y reputación portable, no infraestructura.

@@ -1,0 +1,43 @@
+# dependencies
+/node_modules
+.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+/build
+
+# production
+/dist
+
+# env files (NEVER commit real keys)
+.env
+.env.local
+.env*.local
+
+# multitenant MVP stores (never commit real tenant/order data)
+/data/*
+!/data/.gitkeep
+
+# hardhat
+/artifacts
+/cache
+/typechain-types
+/coverage
+coverage.json
+
+# misc
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editors
+.idea
+.vscode
+*.tsbuildinfo
+next-env.d.ts
+.vercel

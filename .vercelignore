@@ -1,0 +1,16 @@
+# Hardhat / contract build artifacts (not needed for Next.js deploy)
+artifacts
+cache
+typechain-types
+coverage
+coverage.json
+
+# Local secrets and multitenant JSON stores
+.env
+.env.*
+data
+
+# Editor / OS noise
+.DS_Store
+.idea
+.vscode
