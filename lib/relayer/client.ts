@@ -132,6 +132,15 @@ export async function readOrder(orderId: bigint): Promise<OnchainOrder> {
   })) as OnchainOrder;
 }
 
+export async function readNextOrderId(): Promise<bigint> {
+  const { publicClient } = getRelayer();
+  return (await publicClient.readContract({
+    address: CONTRACT_ADDRESS!,
+    abi: ABI,
+    functionName: "nextOrderId",
+  })) as bigint;
+}
+
 // ---------------------------------------------------------------------------
 // Off-chain signature recovery (defensive validation before paying gas)
 // ---------------------------------------------------------------------------

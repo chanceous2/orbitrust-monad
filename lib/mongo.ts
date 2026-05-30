@@ -22,3 +22,16 @@ if (process.env.NODE_ENV !== "production") {
 
 /** Default database from MONGODB_URI path (e.g. orbitrust). */
 export const db: Db = mongoClient.db();
+
+let connectPromise: Promise<void> | null = null;
+
+/** Ensures the shared client is connected (required on cold serverless starts). */
+export async function ensureMongoConnected(): Promise<void> {
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not configured");
+  }
+  if (!connectPromise) {
+    connectPromise = mongoClient.connect().then(() => undefined);
+  }
+  await connectPromise;
+}

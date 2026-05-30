@@ -2,8 +2,11 @@ import "server-only";
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
-import { db } from "@/lib/mongo";
-import { ORDER_TOKEN_SECRET, ORDER_TOKEN_TTL_DAYS } from "@/lib/server/env";
+import { CONTRACT_ADDRESS } from "@/lib/contract/config";
+import { metadataHashToLabel } from "@/lib/orbitrust";
+import { db, ensureMongoConnected } from "@/lib/mongo";
+import { readNextOrderId, readOrder, readSeller } from "@/lib/relayer/client";
+import { isRelayerConfigured, ORDER_TOKEN_SECRET, ORDER_TOKEN_TTL_DAYS } from "@/lib/server/env";
 
 export type OrderStatusName =
   | "created"
@@ -35,6 +38,14 @@ export type OrderRecord = {
 
 const COLLECTION = "order_magic_links";
 
+const ON_CHAIN_STATUS: Record<number, OrderStatusName> = {
+  0: "created",
+  1: "accepted",
+  2: "fulfilled",
+  3: "completed",
+  4: "cancelled",
+};
+
 let indexesReady: Promise<void> | null = null;
 
 function collection() {
@@ -42,6 +53,7 @@ function collection() {
 }
 
 async function ensureIndexes(): Promise<void> {
+  await ensureMongoConnected();
   if (!indexesReady) {
     indexesReady = (async () => {
       const col = collection();
@@ -131,14 +143,73 @@ export async function saveOrder(input: {
     reviewed: false,
     actions: {},
   };
-  await collection().updateOne({ tokenHash }, { $set: record }, { upsert: true });
+  const result = await collection().updateOne({ tokenHash }, { $set: record }, { upsert: true });
+  if (!result.acknowledged) {
+    throw new Error("No se pudo guardar el link de reseña en la base de datos.");
+  }
   return record;
+}
+
+async function recoverOrderRecordFromChain(token: string): Promise<OrderRecord | undefined> {
+  if (!isRelayerConfigured || !CONTRACT_ADDRESS) return undefined;
+
+  const buyer = buyerAddressForToken(token).toLowerCase();
+  const nextId = await readNextOrderId();
+  let match: Awaited<ReturnType<typeof readOrder>> | undefined;
+
+  for (let id = nextId - 1n; id >= 0n; id--) {
+    try {
+      const order = await readOrder(id);
+      if (order.buyer.toLowerCase() === buyer) {
+        match = order;
+        break;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  if (!match) return undefined;
+
+  let sellerHandle: string | undefined;
+  try {
+    const seller = await readSeller(match.seller);
+    if (seller.exists && seller.handle) sellerHandle = seller.handle;
+  } catch {
+    /* optional */
+  }
+
+  const tokenHash = hashToken(token);
+  const createdMs =
+    match.createdAt > 0n ? Number(match.createdAt) * 1000 : Date.now();
+  const ttlMs = ORDER_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+  return {
+    tokenHash,
+    orderId: Number(match.id),
+    seller: match.seller,
+    buyer: match.buyer,
+    amount: match.amount.toString(),
+    metadataHash: match.metadataHash,
+    description: metadataHashToLabel(match.metadataHash),
+    sellerHandle,
+    createdAt: createdMs,
+    expiresAt: createdMs + ttlMs,
+    status: ON_CHAIN_STATUS[match.status] ?? "created",
+    reviewed: match.reviewed,
+    actions: {},
+  };
 }
 
 export async function getOrderByToken(token: string): Promise<OrderRecord | undefined> {
   await ensureIndexes();
-  const doc = await collection().findOne({ tokenHash: hashToken(token) });
-  return doc ?? undefined;
+  const tokenHash = hashToken(token);
+  let doc = await collection().findOne({ tokenHash });
+  if (doc) return doc;
+
+  const recovered = await recoverOrderRecordFromChain(token);
+  if (!recovered) return undefined;
+
+  await collection().updateOne({ tokenHash }, { $set: recovered }, { upsert: true });
+  return recovered;
 }
 
 export function isExpired(record: OrderRecord, now = Date.now()): boolean {
