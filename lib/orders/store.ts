@@ -221,8 +221,10 @@ async function recoverOrderRecordFromChain(token: string): Promise<OrderRecord |
   const buyer = buyerAddressForToken(token).toLowerCase();
   const nextId = await readNextOrderId();
   let match: Awaited<ReturnType<typeof readOrder>> | undefined;
+  const scanLimit = 24n;
+  const start = nextId > scanLimit ? nextId - scanLimit : 0n;
 
-  for (let id = nextId - 1n; id >= 0n; id--) {
+  for (let id = nextId - 1n; id >= start; id--) {
     try {
       const order = await readOrder(id);
       if (order.buyer.toLowerCase() === buyer) {
