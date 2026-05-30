@@ -2,12 +2,8 @@ import "server-only";
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
-import { JsonStore } from "@/lib/server/jsonStore";
-import {
-  ORDER_STORE_PATH,
-  ORDER_TOKEN_SECRET,
-  ORDER_TOKEN_TTL_DAYS,
-} from "@/lib/server/env";
+import { db } from "@/lib/mongo";
+import { ORDER_TOKEN_SECRET, ORDER_TOKEN_TTL_DAYS } from "@/lib/server/env";
 
 export type OrderStatusName =
   | "created"
@@ -37,7 +33,30 @@ export type OrderRecord = {
   actions: Partial<Record<BuyerActionName, { txHash: string; at: number }>>;
 };
 
-const store = new JsonStore<OrderRecord>(ORDER_STORE_PATH);
+const COLLECTION = "order_magic_links";
+
+let indexesReady: Promise<void> | null = null;
+
+function collection() {
+  return db.collection<OrderRecord>(COLLECTION);
+}
+
+async function ensureIndexes(): Promise<void> {
+  if (!indexesReady) {
+    indexesReady = (async () => {
+      const col = collection();
+      try {
+        await col.createIndex({ tokenHash: 1 }, { unique: true, name: "order_magic_links_tokenHash" });
+        await col.createIndex({ orderId: 1 }, { name: "order_magic_links_orderId" });
+      } catch (err) {
+        const code = (err as { code?: number }).code;
+        if (code === 68 || code === 85 || code === 86) return;
+        throw err;
+      }
+    })();
+  }
+  await indexesReady;
+}
 
 // ---------------------------------------------------------------------------
 // Token + ephemeral buyer key derivation
@@ -81,7 +100,7 @@ export function buyerAddressForToken(token: string): `0x${string}` {
 }
 
 // ---------------------------------------------------------------------------
-// Persistence
+// Persistence (MongoDB — shared across serverless instances)
 // ---------------------------------------------------------------------------
 
 export async function saveOrder(input: {
@@ -94,6 +113,7 @@ export async function saveOrder(input: {
   description: string;
   sellerHandle?: string;
 }): Promise<OrderRecord> {
+  await ensureIndexes();
   const tokenHash = hashToken(input.token);
   const now = Date.now();
   const record: OrderRecord = {
@@ -111,14 +131,14 @@ export async function saveOrder(input: {
     reviewed: false,
     actions: {},
   };
-  await store.mutate((data) => {
-    data[tokenHash] = record;
-  });
+  await collection().updateOne({ tokenHash }, { $set: record }, { upsert: true });
   return record;
 }
 
 export async function getOrderByToken(token: string): Promise<OrderRecord | undefined> {
-  return store.get(hashToken(token));
+  await ensureIndexes();
+  const doc = await collection().findOne({ tokenHash: hashToken(token) });
+  return doc ?? undefined;
 }
 
 export function isExpired(record: OrderRecord, now = Date.now()): boolean {
@@ -130,13 +150,11 @@ export async function updateOrderStatus(
   status: OrderStatusName,
   opts?: { reviewed?: boolean }
 ): Promise<void> {
+  await ensureIndexes();
   const tokenHash = hashToken(token);
-  await store.mutate((data) => {
-    const record = data[tokenHash];
-    if (!record) return;
-    record.status = status;
-    if (opts?.reviewed !== undefined) record.reviewed = opts.reviewed;
-  });
+  const $set: Partial<OrderRecord> = { status };
+  if (opts?.reviewed !== undefined) $set.reviewed = opts.reviewed;
+  await collection().updateOne({ tokenHash }, { $set });
 }
 
 /** Marks a buyer action as used (single-use) and stores its tx hash. */
@@ -145,17 +163,18 @@ export async function markActionUsed(
   action: BuyerActionName,
   txHash: string
 ): Promise<void> {
+  await ensureIndexes();
   const tokenHash = hashToken(token);
-  await store.mutate((data) => {
-    const record = data[tokenHash];
-    if (!record) return;
-    record.actions[action] = { txHash, at: Date.now() };
-  });
+  await collection().updateOne(
+    { tokenHash },
+    { $set: { [`actions.${action}`]: { txHash, at: Date.now() } } }
+  );
 }
 
 export async function findByOrderId(orderId: number): Promise<OrderRecord | undefined> {
-  const all = await store.all();
-  return Object.values(all).find((r) => r.orderId === orderId);
+  await ensureIndexes();
+  const doc = await collection().findOne({ orderId });
+  return doc ?? undefined;
 }
 
 /**
@@ -166,8 +185,6 @@ export async function updateStatusByOrderId(
   orderId: number,
   status: OrderStatusName
 ): Promise<void> {
-  await store.mutate((data) => {
-    const record = Object.values(data).find((r) => r.orderId === orderId);
-    if (record) record.status = status;
-  });
+  await ensureIndexes();
+  await collection().updateOne({ orderId }, { $set: { status } });
 }

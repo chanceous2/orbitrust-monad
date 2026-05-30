@@ -72,7 +72,9 @@ En el proyecto → **Settings → Environment Variables**. Configurá al menos e
 | `SPONSORED_TX_DAILY_LIMIT` | Opcional, default `100` |
 | `ORDER_TOKEN_TTL_DAYS` | Opcional, default `7` |
 
-En Vercel **no uses** rutas `./data/*.json` para tenants/órdenes: el filesystem del runtime es efímero. Si no definís `TENANT_STORE_PATH` / `ORDER_STORE_PATH`, la app usa `/tmp/orbitrust/` (ver `lib/server/env.ts`). Eso permite escribir en serverless, pero **los datos no son duraderos** entre cold starts ni entre instancias — válido para demo corta; para producción migrá a Mongo/Postgres (v2.1 del README).
+Los **magic links de compra** (`lib/orders/store.ts`) se persisten en MongoDB (`order_magic_links`), compartidos entre instancias serverless. Requiere `MONGODB_URI` en Vercel.
+
+El store de **tenants/planes** sigue en JSON (`TENANT_STORE_PATH` o `/tmp/orbitrust/tenants.json` en Vercel). Ese archivo es efímero entre cold starts — para límites de plan estrictos en prod, migrá tenants a Mongo también.
 
 ### Servidor — auth de vendedores
 
