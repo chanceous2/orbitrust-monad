@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const envPath = resolve(root, ".env");
-const PROD_URL = process.env.VERCEL_PROD_URL || "https://monad-30may.vercel.app";
+const PROD_URL = process.env.VERCEL_PROD_URL || "https://trust.orbi.tienda";
 
 const SKIP = new Set([
   "PRIVATE_KEY",

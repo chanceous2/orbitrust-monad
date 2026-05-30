@@ -204,6 +204,16 @@ export async function markRegistered(address: `0x${string}`): Promise<void> {
   }
 }
 
+/** Cuando Mongo dice registrado pero el contrato actual no tiene al vendedor. */
+export async function clearRegisteredFlag(address: `0x${string}`): Promise<void> {
+  await ensureIndexes();
+  const normalized = normalizeAddress(address);
+  await db.collection<SellerWalletRecord>(COLLECTION).updateOne(
+    { $expr: { $eq: [{ $toLower: "$address" }, normalized] } },
+    { $set: { registeredOnChain: false } }
+  );
+}
+
 export function toStoreView(wallet: SellerWalletRecord): SellerStoreView {
   return {
     address: wallet.address,

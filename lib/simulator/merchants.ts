@@ -1,6 +1,11 @@
 import "server-only";
 
-import { listRegisteredSellers, type SellerWalletRecord } from "@/lib/sellers/store";
+import { readSeller } from "@/lib/relayer/client";
+import {
+  clearRegisteredFlag,
+  listRegisteredSellers,
+  type SellerWalletRecord,
+} from "@/lib/sellers/store";
 import {
   buildGenericProducts,
   displayNameFromHandle,
@@ -58,9 +63,20 @@ function merchantFromWallet(wallet: SellerWalletRecord): RealStoreMerchant {
 
 export async function listRealStoreMerchants(): Promise<RealStoreCatalog> {
   const wallets = await listRegisteredSellers();
-  const merchants: RealStoreMerchant[] = wallets
-    .filter((wallet) => wallet.registeredOnChain)
-    .map((wallet) => merchantFromWallet(wallet));
+  const merchants: RealStoreMerchant[] = [];
+
+  for (const wallet of wallets) {
+    try {
+      const onchain = await readSeller(wallet.address);
+      if (!onchain.exists) {
+        await clearRegisteredFlag(wallet.address);
+        continue;
+      }
+      merchants.push(merchantFromWallet(wallet));
+    } catch {
+      // Sin RPC/contrato: no listar tiendas que no pudimos verificar.
+    }
+  }
 
   merchants.sort((a, b) => a.name.localeCompare(b.name, "es"));
 

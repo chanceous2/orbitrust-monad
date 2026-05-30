@@ -35,7 +35,10 @@ export async function POST(req: Request) {
   try {
     const onchain = await readSeller(seller);
     if (!onchain.exists) {
-      return fail("Registrá tu perfil de vendedor antes de crear órdenes.", 400);
+      return fail(
+        "Esta tienda no está registrada en el contrato actual. Entrá al panel, completá el registro de vendedor y volvé a probar.",
+        400
+      );
     }
 
     const tenant = (await getTenant(seller)) ?? (await ensureTenant(seller, onchain.handle));

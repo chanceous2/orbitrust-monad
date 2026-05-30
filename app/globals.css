@@ -118,6 +118,9 @@
   .card {
     @apply rounded-lg border border-line bg-surface shadow-sm;
   }
+  .card-dark {
+    @apply rounded-lg border border-white/10 bg-black shadow-sm;
+  }
   .card-pad {
     @apply p-6 sm:p-7;
   }

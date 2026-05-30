@@ -86,7 +86,7 @@ function FlowNode({
           ? "border-verified-line/45 bg-verified/10 shadow-[0_0_32px_rgb(52_211_153_/_0.08)]"
           : wide
             ? "border-violet-line/40 bg-violet/15 shadow-[0_0_40px_rgb(139_92_246_/_0.12)]"
-            : "border-violet-line/35 bg-[#1a1512]/95"
+            : "border-violet-line/35 bg-black"
       }`}
     >
       <span className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-white/35">
@@ -202,12 +202,12 @@ function VisualTile({
         className={`relative flex h-11 w-11 items-center justify-center rounded-full border ${
           ok
             ? "border-verified-line/40 bg-verified/15 text-verified"
-            : "border-white/15 bg-ink text-white/40"
+            : "border-white/15 bg-black text-white/40"
         }`}
       >
         <Icon className="h-5 w-5" />
         {!ok ? (
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-ink text-white/70">
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-black text-white/70">
             <X className="h-3 w-3" />
           </span>
         ) : null}
@@ -225,7 +225,7 @@ function VisualTile({
 
 export function LandingReviewSecurity() {
   return (
-    <PresentationSlide id="seguridad" slide={5} dark className="bg-ink">
+    <PresentationSlide id="seguridad" slide={5} dark className="bg-black">
       <div className="container-app flex min-h-svh flex-col justify-center py-14 sm:py-16">
         <header className="mx-auto max-w-3xl text-center">
           <p className="font-mono text-sm uppercase tracking-[0.22em] text-violet-soft/80">
@@ -236,12 +236,7 @@ export function LandingReviewSecurity() {
           </h2>
         </header>
 
-        <div className="security-diagram-shell relative mt-10 overflow-hidden rounded-2xl border border-white/10 bg-[#12100e] px-4 py-8 sm:mt-12 sm:px-8 sm:py-10">
-          <div
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:24px_24px]"
-            aria-hidden
-          />
-
+        <div className="card-dark relative mt-10 overflow-hidden px-4 py-8 sm:mt-12 sm:px-8 sm:py-10">
           <div className="relative mb-6 flex flex-wrap items-center justify-center gap-2 sm:mb-8 sm:gap-3">
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-white/45">
               Entrada

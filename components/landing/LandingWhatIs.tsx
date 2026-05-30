@@ -1,61 +1,88 @@
-import { ShieldCheck, Star, Link2 } from "@/components/icons";
+import type { ReactNode } from "react";
+import { PresentationImage } from "./PresentationImage";
 import { PresentationSlide } from "./PresentationSlide";
 
-const pillars = [
-  {
-    icon: ShieldCheck,
-    title: "Venta verificada",
-    copy: "Cada reseña está ligada a una operación real.",
-  },
-  {
-    icon: Star,
-    title: "Trust score",
-    copy: "Rating + ventas completadas en un perfil público.",
-  },
-  {
-    icon: Link2,
-    title: "Portable",
-    copy: "Mostrá tu reputación en cualquier canal donde vendés.",
-  },
+const pillarBadges = [
+  "Venta verificada",
+  "Trust score",
+  "Portable",
 ] as const;
+
+function WhatIsBadge({
+  children,
+  variant = "default",
+}: {
+  children: ReactNode;
+  variant?: "default" | "monad";
+}) {
+  const base =
+    "inline-flex items-center rounded-full border px-3.5 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.14em] sm:px-4 sm:py-2 sm:text-xs";
+
+  if (variant === "monad") {
+    return (
+      <span
+        className={`${base} normal-case tracking-[0.02em] border-violet-soft/35 bg-violet/15 text-violet-soft`}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`${base} border-white/20 bg-white/[0.06] text-white/80`}
+    >
+      {children}
+    </span>
+  );
+}
 
 export function LandingWhatIs() {
   return (
-    <PresentationSlide id="que-es" slide={2} className="bg-paper">
-      <div className="container-app py-16 sm:py-20">
-        <p className="eyebrow-lg">Qué es</p>
-        <h2 className="font-display mt-4 max-w-3xl text-[clamp(2.25rem,4.5vw,4rem)] leading-[1.05] text-ink">
-          Un registro de confianza, no solo opiniones.
-        </h2>
+    <PresentationSlide
+      id="que-es"
+      slide={2}
+      dark
+      layout="full"
+      className="bg-black"
+    >
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <PresentationImage
+          src="https://public.orbitienda.com/cart_new_banner.png"
+          alt=""
+          fill
+          className="object-cover object-left"
+          sizes="100vw"
+        />
+      </div>
 
-        <ul className="mt-14 grid gap-8 sm:mt-16 lg:grid-cols-3 lg:gap-10">
-          {pillars.map((item, i) => (
-            <li
-              key={item.title}
-              className="flex flex-col border-t border-line pt-6 sm:pt-8"
-            >
-              <span className="figure mb-5 text-3xl text-violet-ink/50 sm:text-4xl">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-violet-line bg-violet-soft text-violet-ink">
-                <item.icon className="h-6 w-6" />
-              </span>
-              <h3 className="text-xl font-semibold text-ink sm:text-2xl">
-                {item.title}
-              </h3>
-              <p className="mt-2 max-w-xs text-lg leading-snug text-ink-2 sm:text-xl">
-                {item.copy}
-              </p>
-            </li>
-          ))}
-        </ul>
+      <div className="relative z-10 flex min-h-svh w-full items-center justify-end py-16 pl-6 pr-14 sm:py-20 sm:pl-10 sm:pr-20 lg:pl-14 lg:pr-28 xl:pr-36 2xl:pr-44">
+        <div className="flex w-full max-w-2xl flex-col items-end text-right lg:max-w-[40rem] xl:max-w-[44rem]">
+          <div className="flex flex-wrap justify-end gap-2 sm:gap-2.5">
+            <WhatIsBadge>Qué es</WhatIsBadge>
+            {pillarBadges.map((label) => (
+              <WhatIsBadge key={label}>{label}</WhatIsBadge>
+            ))}
+            <WhatIsBadge variant="monad">
+              Impulsado por red Monad{" "}
+              <span className="text-white/55">(Blockchain)</span>
+            </WhatIsBadge>
+          </div>
 
-        <p className="mt-14 max-w-2xl border-t border-line pt-8 text-lg text-ink-2 sm:mt-16 sm:text-xl">
-          <span className="font-semibold text-ink">Reviews</span> prueban que
-          alguien opinó.{" "}
-          <span className="font-semibold text-violet-ink">OrbiTrust</span> prueba
-          que hubo una venta.
-        </p>
+          <h2 className="font-display mt-6 text-[clamp(3rem,8.5vw,6.25rem)] leading-[1.02] text-white sm:mt-8">
+            <span className="block">Pensado para</span>
+            <span className="block">
+              <span className="whitespace-nowrap">e-commerce</span> moderno
+            </span>
+          </h2>
+
+          <p className="mt-6 max-w-lg text-[clamp(1.0625rem,1.75vw,1.375rem)] leading-relaxed text-white/60 sm:mt-8">
+            <span className="font-semibold text-white/90">Reviews</span> prueban
+            que alguien opinó.{" "}
+            <span className="font-semibold text-violet-soft">OrbiTrust</span>{" "}
+            prueba que hubo una venta.
+          </p>
+        </div>
       </div>
     </PresentationSlide>
   );
